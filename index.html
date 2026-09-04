@@ -386,7 +386,7 @@
   <button class="cta" id="footerCta">Start a Chat</button>
 </div>
 
-<footer>Powered by SJ Leads</footer>
+<footer>Powered by SonQAI Technologies</footer>
 
 <button id="launcher">💬</button>
 
@@ -562,7 +562,7 @@ function scrollToSection(id) {
 const CONFIG = {
   // One Apps Script deployment can serve all clients. Prefer URL parameters
   // for per-client setup so this file does not need to be edited every time.
-  webhookUrl: "https://script.google.com/macros/s/AKfycbyZddoCVD7M1bnjFzmaP_6c_JdLr6T02z-PB_KC82-G1UQDSrVr08JpTo-StU37iGBT/exec",
+  webhookUrl: "",
   dashboardUrl: "https://assistq.in",
   clientId: "demo-realty",
   businessName: "This Business",
@@ -598,6 +598,7 @@ const webhookFromUrl = params.get("webhookUrl");
 if (clientFromUrl) CONFIG.clientId = clientFromUrl;
 if (dashboardFromUrl) CONFIG.dashboardUrl = dashboardFromUrl.replace(/\/$/, "");
 if (webhookFromUrl) CONFIG.webhookUrl = webhookFromUrl;
+if (!CONFIG.webhookUrl && CONFIG.dashboardUrl) CONFIG.webhookUrl = CONFIG.dashboardUrl + "/api/chatbot";
 
 // Capture UTM tracking params from the URL.
 // Normal links use: ?utm_source=instagram&utm_medium=paid&utm_campaign=summer_property
@@ -679,14 +680,22 @@ function addMessage(sender, text) {
   return div;
 }
 
+const RENT_BUDGET_OPTIONS = ["Under ₹20k/mo", "₹20k–40k/mo", "₹40k–80k/mo", "₹80k+/mo"];
+function optionsFor(q) {
+  if (q.key === "budget" && String(knownFields.purpose || "").toLowerCase().includes("rent")) {
+    return RENT_BUDGET_OPTIONS;
+  }
+  return q.options;
+}
 function showOptionsIfAny() {
   optionsContainer.innerHTML = "";
   const nextQ = CONFIG.questions.find(q => !knownFields[q.key]);
-  if (!nextQ || !nextQ.options || !nextQ.options.length) return;
+  const opts = nextQ ? optionsFor(nextQ) : null;
+  if (!nextQ || !opts || !opts.length) return;
 
   const row = document.createElement("div");
   row.className = "optionsRow";
-  nextQ.options.forEach(opt => {
+  opts.forEach(opt => {
     const btn = document.createElement("button");
     btn.className = "optionBtn";
     btn.textContent = opt;
@@ -794,7 +803,7 @@ async function sendMessage(optionText) {
       data = JSON.parse(rawText);
     } catch (parseErr) {
       typingEl.remove();
-      addMessage("error", "Backend didn't return JSON. Raw response:\n" + rawText.slice(0, 300));
+      addMessage("error", "Chat service returned an invalid response. Please contact the site administrator.");
       sendBtn.disabled = false;
       return;
     }
